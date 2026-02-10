@@ -20,40 +20,60 @@ def validate(json_string):
     line , col = 1, 0
     errors = []
     in_string = False
+    i = 0  
 
-    for char in json_string:
+    while i < len(json_string):
+        char = json_string[i]
         col += 1 
         if char == "\n":  
             line += 1
             col = 0
+            i += 1
             continue 
 
         if char == '"' and not in_string:
             in_string = True
+            i += 1
             continue
 
         if in_string:
             if char == '\\':
+                i += 2
+                col += 1
                 continue
             elif char == '"':
                 in_string = False
-            continue  
+            i += 1
+            continue
 
         if char in "{[":
             stack.push((char, line, col))
         elif char in "}]":
             if stack.is_empty():
-                return False, [f"Unexpected character at line {line}, column {col}"]
+                return False, [f"ERROR Line {line}, Col {col}: Unexpected '{char}'"]
+
             open_char, open_line, open_col = stack.pop()
             if MATCHING[char] != open_char:
-                return False, [f"Mismatched character at line {line}, column {col}. Expected closing for {open_char} opened at line {open_line}, column {open_col}"]
+                expected = next(k for k, v in MATCHING.items() if v == open_char)
+                return False, [
+                    f"ERROR Line {line}, Col {col}: Expected '{expected}' but found '{char}' "
+                    f"(opening '{open_char}' at Line {open_line}, Col {open_col})"
+                ]
+        i += 1
+
     if in_string:
-        return False, ["Unterminated string"]
+        return False, [
+            f"ERROR Line {line}, Col {col}: Unterminated string"]
 
     if not stack.is_empty():
-        open_char, open_line, open_col = stack.pop()
-        return False, [f"Unclosed {open_char} opened at line {open_line}, column {open_col}"]
+        errors = []
+        while not stack.is_empty():
+            open_char, open_line, open_col = stack.pop()
+            errors.append(f"ERROR: Unclosed '{open_char}' at Line {open_line}, Col {open_col}")
+        return False, errors
+        
     return True, []
+
 
 
     """
