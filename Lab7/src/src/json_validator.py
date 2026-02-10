@@ -19,6 +19,7 @@ def validate(json_string):
     stack = Stack()
     line , col = 1, 0
     errors = []
+    in_string = False
 
     for char in json_string:
         col += 1 
@@ -26,6 +27,17 @@ def validate(json_string):
             line += 1
             col = 0
             continue 
+
+        if char == '"' and not in_string:
+            in_string = True
+            continue
+
+        if in_string:
+            if char == '\\':
+                continue
+            elif char == '"':
+                in_string = False
+            continue  
 
         if char in "{[":
             stack.push((char, line, col))
@@ -35,11 +47,15 @@ def validate(json_string):
             open_char, open_line, open_col = stack.pop()
             if MATCHING[char] != open_char:
                 return False, [f"Mismatched character at line {line}, column {col}. Expected closing for {open_char} opened at line {open_line}, column {open_col}"]
+    if in_string:
+        return False, ["Unterminated string"]
 
     if not stack.is_empty():
         open_char, open_line, open_col = stack.pop()
         return False, [f"Unclosed {open_char} opened at line {open_line}, column {open_col}"]
     return True, []
+
+
     """
     Validate the structural nesting of a JSON string.
 
